@@ -1,9 +1,9 @@
-# Austrian Power Price Forecasting & Algorithmic Trading Strategy
+# Day Ahead Power Trading Engine
 
 ## Project Overview
-This project focuses on predicting **Day-Ahead Power Prices (Europe/Vienna)** to optimize a **Battery Arbitrage Strategy**. 
+This project focuses on predicting **Day-Ahead Power Prices (Europe/Vienna)** to drive a **Market-Neutral Battery Arbitrage Strategy.**
 
-Moving beyond standard time-series analysis, this project iterates through Linear Regression, ARIMA, and **XGBoost** to capture the non-linear dynamics of the merit order curve. The final model drives a simulation of a 1MW Battery Storage asset, optimizing charge/discharge cycles based on predicted intraday spreads.
+Moving beyond standard univariate time-series analysis, this project iterates through Linear Regression, rolling ARIMA, and finally XGBoost to capture the non-linear dynamics of the energy merit order curve. The final predictive model powers a backtested simulation of a 1MW Battery Storage asset, optimizing charge/discharge cycles based on dynamic predicted intraday spreads.
 
 ## Key Results
 - **Final Model:** XGBoost Regressor (Gradient Boosting)
@@ -13,7 +13,7 @@ Moving beyond standard time-series analysis, this project iterates through Linea
 
 ## Tech Stack
 - **Core:** Python, Pandas, NumPy
-- **Modeling:** Scikit-Learn (Linear), Statsmodels/PMDARIMA (ARIMA), XGBoost
+- **Modeling:** Scikit-Learn (Linear OLS), Statsmodels/PMDARIMA (ARIMA), XGBoost
 - **Visualization:** Matplotlib/Seaborn
 
 ---
