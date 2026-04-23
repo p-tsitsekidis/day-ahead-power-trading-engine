@@ -23,7 +23,6 @@ MARKET_CONFIGS = {
         "timezone": "Europe/Vienna",
         "price_col": "AT_price_day_ahead",
         "load_forecast_col": "AT_load_forecast_entsoe_transparency",
-        "load_actual_col": "AT_load_actual_entsoe_transparency",
         "wind_cols": ["AT_wind_onshore_generation_actual"],
         "solar_col": "AT_solar_generation_actual"
     },
@@ -32,7 +31,6 @@ MARKET_CONFIGS = {
         "timezone": "Europe/Copenhagen",
         "price_col": "DK_1_price_day_ahead",
         "load_forecast_col": "DK_1_load_forecast_entsoe_transparency",
-        "load_actual_col": "DK_1_load_actual_entsoe_transparency",
         "wind_cols": [
             "DK_1_wind_offshore_generation_actual", 
             "DK_1_wind_onshore_generation_actual"
@@ -44,7 +42,6 @@ MARKET_CONFIGS = {
         "timezone": "Europe/Copenhagen",
         "price_col": "DK_2_price_day_ahead",
         "load_forecast_col": "DK_2_load_forecast_entsoe_transparency",
-        "load_actual_col": "DK_2_load_actual_entsoe_transparency",
         "wind_cols": [
             "DK_2_wind_offshore_generation_actual",
             "DK_2_wind_onshore_generation_actual"
@@ -77,3 +74,23 @@ def load_raw_data(
         logger.info(f"Saved to {local_path}")
 
     return df
+
+# ============================================================
+# FUNCTION 2: Select Market Columns & Set Index
+# ============================================================
+def select_market_columns(df: pd.DataFrame, config: dict) -> pd.DataFrame:
+    """
+    Filter the raw OPSD DataFrame to a single market's columns,
+    convert the timestamp to the market's local timezone, and set it as index.
+    """
+    prefix = config["prefix"]
+    timezone = config["timezone"]
+
+    market_cols = df.columns[df.columns.str.startswith(prefix)]
+    selected_cols = ["cet_cest_timestamp"] + list(market_cols)
+    df_selected = df[selected_cols].copy()
+
+    df_selected["cet_cest_timestamp"] = pd.to_datetime(df_selected["cet_cest_timestamp"], utc=True).dt.tz_convert(timezone)
+    df_selected = df_selected.set_index("cet_cest_timestamp")
+
+    return df_selected
