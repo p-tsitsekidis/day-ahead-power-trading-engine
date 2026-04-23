@@ -94,3 +94,45 @@ def select_market_columns(df: pd.DataFrame, config: dict) -> pd.DataFrame:
     df_selected = df_selected.set_index("cet_cest_timestamp")
 
     return df_selected
+
+# ============================================================
+# FUNCTION 3: Enforce Hourly Frequency
+# ============================================================
+def enforce_hourly_frequency(df: pd.DataFrame) -> pd.DataFrame:
+    """"
+    Reindex the DataFrame to a complete hourly range, filling any missing timestamps with NaN. 
+    This ensures downstream time-based operations (lags, rolling windows) work on a complete grid.
+    """
+    full_idx = pd.date_range(
+        start=df.index.min(),
+        end=df.index.max(),
+        freq="h",
+        tz=df.index.tz
+    )
+    return df.reindex(full_idx)
+
+# ============================================================
+# FUNCTION 4: Slice to Valid Range
+# ============================================================
+def slice_to_valid_range(df: pd.DataFrame, config: dict) -> pd.DataFrame:
+    """
+    Find the common time range where all the important columns have data,
+    and slice the DataFrame to that range. Different columns start and end
+    at different times in the OPSD dataset, so we slice to the intersection
+    to avoid leading/trailing NaN periods.
+    """
+    important_cols = [
+        config["load_forecast_col"],
+        config["price_col"],
+        config["solar_col"]
+        ] + config["wind_cols"]
+    
+    first_valid = df[important_cols].apply(lambda col: col.first_valid_index())
+    last_valid = df[important_cols].apply(lambda col: col.last_valid_index())
+
+    global_start = first_valid.max()
+    global_end = last_valid.min()
+
+    logger.info(f"Slicing {config["prefix"]} data to range: {global_start} to {global_end}")
+
+    return df.loc[global_start:global_end].copy()
