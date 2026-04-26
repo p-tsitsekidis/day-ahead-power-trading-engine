@@ -99,7 +99,7 @@ def select_market_columns(df: pd.DataFrame, config: dict) -> pd.DataFrame:
 # FUNCTION 3: Enforce Hourly Frequency
 # ============================================================
 def enforce_hourly_frequency(df: pd.DataFrame) -> pd.DataFrame:
-    """"
+    """
     Reindex the DataFrame to a complete hourly range, filling any missing timestamps with NaN. 
     This ensures downstream time-based operations (lags, rolling windows) work on a complete grid.
     """
