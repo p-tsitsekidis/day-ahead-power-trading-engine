@@ -90,6 +90,11 @@ def select_market_columns(df: pd.DataFrame, config: dict) -> pd.DataFrame:
     selected_cols = ["cet_cest_timestamp"] + list(market_cols)
     df_selected = df[selected_cols].copy()
 
+    # Drop load_actual (we use forecast only to simulate D-1 auction conditions)
+    actual_load_col = f"{prefix}load_actual_entsoe_transparency"
+    if actual_load_col in df_selected.columns:
+        df_selected = df_selected.drop(columns=[actual_load_col])
+
     df_selected["cet_cest_timestamp"] = pd.to_datetime(df_selected["cet_cest_timestamp"], utc=True).dt.tz_convert(timezone)
     df_selected = df_selected.set_index("cet_cest_timestamp")
 
