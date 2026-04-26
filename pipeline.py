@@ -133,6 +133,6 @@ def slice_to_valid_range(df: pd.DataFrame, config: dict) -> pd.DataFrame:
     global_start = first_valid.max()
     global_end = last_valid.min()
 
-    logger.info(f"Slicing {config["prefix"]} data to range: {global_start} to {global_end}")
+    logger.info(f"Slicing {config['prefix']} data to range: {global_start} to {global_end}")
 
     return df.loc[global_start:global_end].copy()
