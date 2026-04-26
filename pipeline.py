@@ -3,6 +3,7 @@
 import os
 import logging
 import pandas as pd
+import numpy as np
 
 # ============================================================
 # LOGGING
@@ -141,3 +142,67 @@ def slice_to_valid_range(df: pd.DataFrame, config: dict) -> pd.DataFrame:
     logger.info(f"Slicing {config['prefix']} data to range: {global_start} to {global_end}")
 
     return df.loc[global_start:global_end].copy()
+
+# ============================================================
+# FUNCTION 5: Engineer Features
+# ============================================================
+def engineer_features(df: pd.DataFrame, config: dict) -> pd.DataFrame:
+    """
+    Build the full feature set for day-ahead price forecasting.
+
+    Feature groups:
+        1. 48h lags of generation actuals (simulating data availability at 12:00 CET D-1)
+        2. 24h lag of price (prior day's prices are always known)
+        3. 168h (weekly) lags of price and load
+        4. Load ramp (first-order difference)
+        5. 24h rolling means of load, wind, and lagged price
+        6. Cyclical encoding of hour and weekday (sin/cos)
+
+    Drops the original generation actuals after lagging to prevent look-ahead bias.
+    Trims the first 168 rows to remove NaNs introduced by the longest lag.
+    """
+
+    df = df.copy()
+    price_col = config["price_col"]
+    load_col = config["load_forecast_col"]
+    solar_col = config["solar_col"]
+    wind_cols = config["wind_cols"]
+
+    # 1. Lag generation actuals by 48h (not available at D-1 12:00 auction time)
+    lagged_wind_cols = []
+    for wind_col in wind_cols:
+        lagged_name = f"{wind_col}_lag48h"
+        df[lagged_name] = df[wind_col].shift(48)
+        lagged_wind_cols.append(lagged_name)
+    
+    df[f"{solar_col}_lag48h"] = df[solar_col].shift(48)
+
+    # Drop raw actuals
+    df = df.drop(columns=wind_cols + [solar_col])
+
+    # 2. Lag price by 24h
+    df[f"{price_col}_lag24h"] = df[price_col].shift(24)
+
+    # 3. Weekly (168h) lags
+    df[f"{price_col}_lag168h"] = df[price_col].shift(168)
+    df[f"{load_col}_lag168h"] = df[load_col].shift(168)
+
+    # 4. load ramp (first difference of forecast load)
+    df["load_ramp"] = df[load_col].diff()
+
+    # 5. 24h rolling means
+    df[f"{load_col}_rolling24h"] = df[load_col].rolling(window=24).mean()
+    df[f"{price_col}_lag24h_rolling24h"] = df[f"{price_col}_lag24h"].rolling(window=24).mean()
+    for lagged_name in lagged_wind_cols:
+        df[f"{lagged_name}_rolling24h"] = df[lagged_name].rolling(window=24).mean()
+    
+    # Trim the first 168 rows
+    df = df.iloc[168:].copy()
+
+    # 6. Cyclical encoding of time
+    df["hour_sin"] = np.sin(2 * np.pi * df.index.hour / 24.0)
+    df["hour_cos"] = np.cos(2 * np.pi * df.index.hour / 24.0)
+    df["weekday_sin"] = np.sin(2 * np.pi * df.index.dayofweek / 7.0)
+    df["weekday_cos"] = np.cos(2 * np.pi * df.index.dayofweek / 7.0)
+
+    return df
