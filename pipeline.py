@@ -158,8 +158,8 @@ def engineer_features(df: pd.DataFrame, config: dict) -> pd.DataFrame:
         5. 24h rolling means of load, wind, and lagged price
         6. Cyclical encoding of hour and weekday (sin/cos)
 
-    Drops the original generation actuals after lagging to prevent look-ahead bias.
-    Trims the first 168 rows to remove NaNs introduced by the longest lag.
+    Drops the raw generation actuals after lagging to ensure the model only sees
+    information available at the auction time.
     """
 
     df = df.copy()
