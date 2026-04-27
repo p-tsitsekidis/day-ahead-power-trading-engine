@@ -206,3 +206,60 @@ def engineer_features(df: pd.DataFrame, config: dict) -> pd.DataFrame:
     df["weekday_cos"] = np.cos(2 * np.pi * df.index.dayofweek / 7.0)
 
     return df
+
+# Helper for split_and_fill
+def _fill_seasonal(df: pd.DataFrame, period: int = 24) -> pd.DataFrame:
+    """
+    Fill NaN values with the value from the same hour 'period' hours ago,
+    preserving daily seasonality. Falls back to forward-fill, then back-fill,
+    for any remaining NaNs at the edges.
+    """
+    df_filled = df.copy()
+    for col in df_filled.columns:
+        df_filled[col] = df_filled[col].fillna(df_filled[col].shift(period))
+        df_filled[col] = df_filled[col].ffill()
+        df_filled[col] = df_filled[col].bfill()
+    return df_filled
+
+# ============================================================
+# FUNCTION 6: Train/Test Split with Seasonal NaN Fill
+# ============================================================
+def split_and_fill(
+        df: pd.DataFrame,
+        config: dict,
+        test_weeks: int = 2
+) -> tuple[pd.DataFrame, pd.Series, pd.DataFrame, pd.Series]:
+    """
+    Split the engineered DataFrame into train and test sets, 
+    then fill NaN values within each set independently using 
+    a seasonal pattern (same hour 24h prior, then ffill, then bfill)
+
+    The fill happens AFTER the split to prevent leakage: if we filled
+    before splitting, the test set could inherit seasonal patterns
+    derived from the train data, which would bias evaluation.
+
+    Returns:
+        X_train, y_train, X_test, y_test
+    """
+    price_col = config["price_col"]
+    test_hours = 24 * 7 * test_weeks
+
+    split_idx = len(df) - test_hours
+    split_date = df.index[split_idx]
+    logger.info(f"Train ends / Test starts at: {split_date}")
+    logger.info(f"Test duration: {test_hours} hours ({test_weeks} weeks)")
+
+    train_set = df.iloc[:split_idx].copy()
+    test_set = df.iloc[split_idx:].copy()
+
+    # Fill NaNs using seasonal pattern (same hour 24h ago), then ffill/bfill
+    train_set = _fill_seasonal(train_set)
+    test_set = _fill_seasonal(test_set)
+
+    # Separate target from features
+    y_train = train_set[price_col].copy()
+    y_test = test_set[price_col].copy()
+    X_train = train_set.drop(columns=[price_col])
+    X_test = test_set.drop(columns=[price_col])
+
+    return X_train, y_train, X_test, y_test
