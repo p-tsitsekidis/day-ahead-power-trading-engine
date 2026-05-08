@@ -263,3 +263,52 @@ def split_and_fill(
     X_test = test_set.drop(columns=[price_col])
 
     return X_train, y_train, X_test, y_test
+
+# ============================================================
+# FUNCTION 7: Train XGBoost
+# ============================================================
+def train_xgboost(
+        X_train: pd.DataFrame,
+        y_train: pd.Series,
+        X_test: pd.DataFrame,
+        y_test: pd.Series,
+        n_estimators: int = 3000,
+        learning_rate: float = 0.01,
+        max_depth: int = 8,
+        subsample: float = 0.7,
+        colsample_bytree: float = 0.7,
+        early_stopping_rounds: int = 100,
+        random_state: int = 42,
+        verbose: int = 100,
+):
+    """
+    Train an XGBoost regressor on the engineered features and return the fitted model.
+
+    Early stopping watches the test set's loss (last eval_set entry) to pick the
+    optimal number of trees. The model exposes feature importance after fitting.
+
+    Returns:
+        The fitted XGBRegressor.
+    """
+    import xgboost as xgb
+
+    model = xgb.XGBRegressor(
+        n_estimators=n_estimators,
+        learning_rate=learning_rate,
+        max_depth=max_depth,
+        subsample=subsample,
+        colsample_bytree=colsample_bytree,
+        early_stopping_rounds=early_stopping_rounds,
+        n_jobs=-1,
+        random_state=random_state,
+    )
+
+    logger.info("Training XGBoost...")
+    model.fit(
+        X_train,
+        y_train,
+        eval_set=[(X_train, y_train), (X_test, y_test)],
+        verbose=verbose,
+    )
+
+    return model
