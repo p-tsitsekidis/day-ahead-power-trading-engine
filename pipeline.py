@@ -388,7 +388,7 @@ def run_battery_backtest(
             current_soc += energy_to_buy
             action = "CHARGE"
         
-        elif sig == 1 and current_soc > 0:
+        elif sig == -1 and current_soc > 0:
             energy_to_sell = min(max_rate_mw, current_soc)
             cash += energy_to_sell * price * efficiency
             current_soc -= energy_to_sell
