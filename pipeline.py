@@ -352,3 +352,51 @@ def generate_daily_signals(
     )
 
     return df_sim
+
+def run_battery_backtest(
+        signals_df: pd.DataFrame,
+        capacity_mwh: float = 1.0,
+        max_rate_mw: float = 1.0,
+        efficiency: float = 0.90
+        ) -> pd.DataFrame:
+    """
+    Simulate a battery actin on the buy/sell signals.
+
+    The battery state evolves sequentially through time. On a BUY signal it charges
+    up to capacity at the actual market price. On a SELL signal it discharges what
+    it has, with the round-trip efficiency penalty applied to discharge revenue.
+
+    No directional bets, the strategy only captures intraday spreads.
+
+    Returns a DataFrame indexed by timestamp with columns: pnl, soc, action.
+    """
+    current_soc = 0.0
+    cash = 0.0
+    history = []
+
+    logger.info("Running battery backtest...")
+
+    for t in range(len(signals_df)):
+        row = signals_df.iloc[t]
+        price = row["actual"]
+        sig = row["signal"]
+        action = "HOLD"
+
+        if sig == 1 and current_soc < capacity_mwh:
+            energy_to_buy = min(max_rate_mw, capacity_mwh - current_soc)
+            cash -= energy_to_buy * price
+            current_soc += energy_to_buy
+            action = "CHARGE"
+        
+        elif sig == 1 and current_soc > 0:
+            energy_to_sell = min(max_rate_mw, current_soc)
+            cash += energy_to_sell * price * efficiency
+            current_soc -= energy_to_sell
+            action = "DISCHARGE"
+
+        history.append({"pnl": cash, "soc": current_soc, "action": action})
+
+    results = pd.DataFrame(history, index=signals_df.index)
+    logger.info(f"Final trading PnL: €{cash:.2f}")
+
+    return results
