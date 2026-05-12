@@ -312,3 +312,43 @@ def train_xgboost(
     )
 
     return model
+
+def generate_daily_signals(
+        y_pred: pd.Series, 
+        y_actual: pd.Series, 
+        top_n: int=2
+        ) -> pd.DataFrame:
+    """
+    Generate daily bui/sell signals from forecasted prices.
+
+    For each day, the 'top_n' cheapest predicted hours are marked as BUY (1),
+    the 'top_n' most expensive predicted hours are marked as SELL (-1),
+    and all other hours are HOLD (0).
+
+    The Day-Ahead market lets you see all 24 hourly predictions at once,
+    so ranking within a day is the natural unit of decision.
+
+    Returns a DataFrame indexed by timestamp with columns: actual, pred, signal.
+    """
+    df_sim = pd.DataFrame({
+        "actual": y_actual,
+        "pred": y_pred
+    }, index=y_actual.index)
+
+    df_sim["date"] = df_sim.index.date
+
+    def _signals_for_day(group: pd.DataFrame) -> pd.Series:
+        ranks = group["pred"].rank(method="first")
+        signals = pd.Series(0, index=group.index)
+        signals[ranks <= top_n] = 1
+        signals[ranks > (len(group) - top_n)] = -1
+        
+        return signals
+    
+    df_sim["signal"] = (
+        df_sim.groupby("date")
+        .apply(_signals_for_day)
+        .reset_index(0, drop=True)
+    )
+
+    return df_sim
