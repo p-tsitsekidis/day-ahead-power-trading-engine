@@ -347,7 +347,7 @@ def generate_daily_signals(
     
     df_sim["signal"] = (
         df_sim.groupby("date")
-        .apply(_signals_for_day)
+        .apply(_signals_for_day, include_groups=False)
         .reset_index(0, drop=True)
     )
 
