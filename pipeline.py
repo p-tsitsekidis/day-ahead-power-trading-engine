@@ -319,7 +319,7 @@ def generate_daily_signals(
         top_n: int=2
         ) -> pd.DataFrame:
     """
-    Generate daily bui/sell signals from forecasted prices.
+    Generate daily buy/sell signals from forecasted prices.
 
     For each day, the 'top_n' cheapest predicted hours are marked as BUY (1),
     the 'top_n' most expensive predicted hours are marked as SELL (-1),
@@ -360,7 +360,7 @@ def run_battery_backtest(
         efficiency: float = 0.90
         ) -> pd.DataFrame:
     """
-    Simulate a battery actin on the buy/sell signals.
+    Simulate a battery acting on the buy/sell signals.
 
     The battery state evolves sequentially through time. On a BUY signal it charges
     up to capacity at the actual market price. On a SELL signal it discharges what
